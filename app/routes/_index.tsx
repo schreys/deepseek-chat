@@ -2,8 +2,14 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Loader2 } from "lucide-react";
 import { ChatMessage } from "~/components/ChatMessage";
 import type { Message } from "~/types";
+import { useLoaderData } from "@remix-run/react";
+import { getModels } from "./api.getModels";
+
+export const loader = getModels;
 
 export default function Index() {
+  const { models } = useLoaderData<typeof loader>();
+  const [selectedModel, setSelectedModel] = useState<string>(models[0] || "");
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -20,7 +26,7 @@ export default function Index() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !selectedModel) return;
 
     const userMessage: Message = { role: "user", content: input };
     setMessages((prev) => [...prev, userMessage]);
@@ -36,6 +42,7 @@ export default function Index() {
         },
         body: JSON.stringify({
           messages: [...messages, userMessage],
+          model: selectedModel,
         }),
       });
 
@@ -93,7 +100,31 @@ export default function Index() {
     <div className="flex flex-col h-screen bg-gray-50">
       <header className="bg-gray-800 text-white py-4 px-6">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-xl font-semibold">Deepseek Chat</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold">Ollama Chat</h1>
+            <div className="flex items-center gap-3">
+              <label htmlFor="model" className="text-sm">
+                Model:
+              </label>
+              <select
+                id="model"
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                className="bg-gray-700 text-white rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={models.length === 0}
+              >
+                {models.length === 0 ? (
+                  <option>No models found</option>
+                ) : (
+                  models.map((model) => (
+                    <option key={model} value={model}>
+                      {model}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -119,15 +150,19 @@ export default function Index() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your message..."
+              placeholder={
+                models.length === 0
+                  ? "No models available"
+                  : "Type your message..."
+              }
               className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:border-blue-500"
-              disabled={isLoading}
+              disabled={isLoading || models.length === 0}
             />
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || models.length === 0 || !input.trim()}
               className={`rounded-lg px-4 py-2 flex items-center justify-center ${
-                isLoading
+                isLoading || models.length === 0 || !input.trim()
                   ? "bg-gray-300 cursor-not-allowed"
                   : "bg-blue-500 hover:bg-blue-600 text-white"
               }`}

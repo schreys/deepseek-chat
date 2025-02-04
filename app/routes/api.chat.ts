@@ -9,10 +9,10 @@ export const action: ActionFunction = async ({ request }) => {
   }
 
   try {
-    const { messages } = await request.json();
+    const { messages, model } = await request.json();
 
     const stream = await ollama.chat({
-      model: "deepseek-r1:14b",
+      model,
       messages: messages.map((msg: Message) => ({
         role: msg.role,
         content: msg.content,
